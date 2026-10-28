@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="WeatherHub — Live Weather Dashboard. Search current weather, 5-day forecast, and manage favourite cities worldwide.">
+  <title>WeatherHub — Explore Weather Worldwide</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- =====================================================
+     Toast Notifications
+===================================================== -->
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+<!-- =====================================================
+     App Layout
+===================================================== -->
+<div class="app-layout">
+
+  <!-- ══════════════════════════════════════════════
+       LEFT SIDEBAR
+  ══════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="bi bi-cloud-sun-fill"></i></div>
+      <div class="logo-text">
+        <span class="logo-name">WeatherHub</span>
+        <span class="logo-sub">Explore Weather Worldwide</span>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sidebar-nav" aria-label="Main navigation">
+      <button class="nav-link-item active" data-section="home" id="nav-home">
+        <i class="bi bi-house-fill nav-li-icon"></i>
+        <span>Home</span>
+      </button>
+      <button class="nav-link-item" data-section="current" id="nav-current">
+        <i class="bi bi-thermometer-half nav-li-icon"></i>
+        <span>Current Weather</span>
+      </button>
+      <button class="nav-link-item" data-section="forecast" id="nav-forecast">
+        <i class="bi bi-calendar3 nav-li-icon"></i>
+        <span>5-Day Forecast</span>
+      </button>
+      <button class="nav-link-item" data-section="favourites" id="nav-favourites">
+        <i class="bi bi-heart-fill nav-li-icon"></i>
+        <span>Favourite Cities</span>
+      </button>
+      <button class="nav-link-item" data-section="about" id="nav-about">
+        <i class="bi bi-info-circle nav-li-icon"></i>
+        <span>About</span>
+      </button>
+    </nav>
+
+    <!-- Globe + Quote -->
+    <div class="sidebar-footer">
+      <div class="globe-wrap">
+        <img src="{{ url_for('static', filename='img/earth_globe.png') }}" alt="Earth globe" class="earth-globe">
+      </div>
+      <p class="sidebar-quote">" Better Weather<br>Better Days "</p>
+    </div>
+
+  </aside>
+  <!-- / SIDEBAR -->
+
+  <!-- ══════════════════════════════════════════════
+       MAIN AREA
+  ══════════════════════════════════════════════ -->
+  <div class="main-area">
+
+    <!-- ── TOP BAR ── -->
+    <header class="topbar" role="banner">
+      <div class="topbar-left">
+        <!-- Mobile menu toggle -->
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+          <i class="bi bi-list"></i>
+        </button>
+        <!-- Search form -->
+        <form id="weatherForm" class="search-form" role="search" aria-label="City weather search">
+          <div class="search-city-wrap">
+            <i class="bi bi-geo-alt-fill search-pin-icon"></i>
+            <input
+              type="text"
+              id="cityInput"
+              class="search-city-input"
+              placeholder="Enter city name..."
+              autocomplete="off"
+              aria-label="City name"
+              required>
+          </div>
+          <div class="search-country-wrap">
+            <input
+              type="text"
+              id="countryInput"
+              class="search-country-input"
+              placeholder="IN"
+              maxlength="2"
+              autocomplete="off"
+              aria-label="Country code">
+            <i class="bi bi-chevron-down" style="color:#94a3b8;font-size:.75rem;pointer-events:none;"></i>
+          </div>
+          <button type="submit" id="searchBtn" class="search-btn" aria-label="Search weather">
+            <i class="bi bi-search"></i>
+            <span id="searchBtnText">Search</span>
+          </button>
+        </form>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Theme toggle -->
+        <div class="theme-toggle" role="group" aria-label="Day/Night mode">
+          <button class="theme-btn" id="dayBtn" aria-label="Day mode" title="Day mode">
+            <i class="bi bi-sun-fill"></i>
+          </button>
+          <button class="theme-btn active" id="nightBtn" aria-label="Night mode" title="Night mode">
+            <i class="bi bi-moon-fill"></i>
+          </button>
+        </div>
+        <!-- Date/Time -->
+        <div class="topbar-datetime">
+          <div id="topbarDate" class="datetime-date"></div>
+          <div id="topbarTime" class="datetime-time"></div>
+        </div>
+      </div>
+    </header>
+    <!-- / TOP BAR -->
+
+    <!-- ── CONTENT ── -->
+    <main class="content-grid" role="main">
+
+      <!-- ── CENTER COLUMN ── -->
+      <div class="center-col">
+
+        <!-- ─── WEATHER HERO CARD ─── -->
+        <div class="weather-hero" id="weatherHeroCard">
+
+          <!-- Background image -->
+          <div class="hero-bg" id="heroBg">
+            <img src="{{ url_for('static', filename='img/weather_hero_bg.png') }}" alt="" class="hero-bg-img" aria-hidden="true">
+            <div class="hero-bg-overlay"></div>
+          </div>
+
+          <!-- Live badge -->
+          <div class="live-badge" id="liveBadge">
+            <span class="live-dot"></span>
+            Live Weather
+          </div>
+
+          <!-- Hero content -->
+          <div class="hero-content" id="heroContent">
+            <!-- Loading state -->
+            <div id="heroLoading" class="hero-loading">
+              <div class="hero-spinner"></div>
+              <span>Fetching weather…</span>
+            </div>
+
+            <!-- Error state -->
+            <div id="heroError" class="hero-error hidden">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <span id="heroErrorMsg">Unable to fetch weather.</span>
+            </div>
+
+            <!-- Weather data -->
+            <div id="heroData" class="hidden">
+              <h1 class="hero-city">
+                <span id="wCityName">—</span><span class="hero-country-badge" id="wCountryBadge">, IN</span>
+              </h1>
+              <p class="hero-region">
+                <i class="bi bi-geo-alt-fill" style="font-size:.8rem;"></i>
+                <span id="wRegion">—</span>
+              </p>
+              <p class="hero-datetime" id="heroDatetime"></p>
+
+              <div class="hero-temp-block">
+                <div>
+                  <div class="hero-temp" id="wTemp">—°C</div>
+                  <div class="hero-desc" id="wDesc">—</div>
+                  <div class="hero-feels">
+                    <img id="wSmallIcon" src="" alt="" class="hero-small-icon">
+                    <span>Feels like <strong id="wFeels">—</strong></span>
+                  </div>
+                </div>
+                <img id="wHeroIcon" src="" alt="Weather icon" class="hero-weather-icon">
+              </div>
+            </div>
+          </div>
+
+          <!-- Add to Favourites button -->
+          <button id="addFavFromHero" class="add-fav-hero-btn hidden" onclick="openAddModal()" title="Add to favourites" aria-label="Save this city to favourites">
+            <i class="bi bi-star-fill"></i>
+          </button>
+
+        </div>
+        <!-- / WEATHER HERO -->
+
+        <!-- ─── STAT CARDS ─── -->
+        <div class="stat-cards-row" id="statCardsRow">
+
+          <div class="stat-card stat-orange">
+            <div class="stat-icon"><i class="bi bi-thermometer-half"></i></div>
+            <div class="stat-label">Feels Like</div>
+            <div class="stat-val"><span id="statFeels">—</span><span class="stat-unit">°C</span></div>
+          </div>
+
+          <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="bi bi-droplet-fill"></i></div>
+            <div class="stat-label">Humidity</div>
+            <div class="stat-val"><span id="statHumidity">—</span><span class="stat-unit">%</span></div>
+          </div>
+
+          <div class="stat-card stat-green">
+            <div class="stat-icon"><i class="bi bi-wind"></i></div>
+            <div class="stat-label">Wind Speed</div>
+            <div class="stat-val"><span id="statWind">—</span><span class="stat-unit">m/s</span></div>
+          </div>
+
+          <div class="stat-card stat-purple">
+            <div class="stat-icon"><i class="bi bi-speedometer"></i></div>
+            <div class="stat-label">Pressure</div>
+            <div class="stat-val"><span id="statPressure">—</span><span class="stat-unit">hPa</span></div>
+          </div>
+
+          <div class="stat-card stat-teal">
+            <div class="stat-icon"><i class="bi bi-eye-fill"></i></div>
+            <div class="stat-label">Visibility</div>
+            <div class="stat-val"><span id="statVisibility">—</span><span class="stat-unit">km</span></div>
+          </div>
+
+        </div>
+        <!-- / STAT CARDS -->
+
+        <!-- ─── 5-DAY FORECAST ─── -->
+        <div class="forecast-section" id="forecastSection">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="bi bi-calendar3 title-icon title-icon-blue"></i>
+              <span>5-Day Weather Forecast</span>
+            </div>
+            <button class="view-detail-btn" onclick="navigateTo('forecast')" aria-label="View detailed forecast">
+              View Detailed Forecast <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+          <div class="forecast-cards-row" id="forecastCards" role="list">
+            <!-- Populated by JS -->
+            <div class="forecast-loading">
+              <div class="hero-spinner" style="width:24px;height:24px;border-width:3px;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- / FORECAST -->
+
+      </div>
+      <!-- / CENTER COL -->
+
+      <!-- ── RIGHT PANEL ── -->
+      <div class="right-panel">
+
+        <!-- ─── FAVOURITE CITIES ─── -->
+        <div class="panel-card" id="favouritesPanel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <i class="bi bi-heart-fill" style="color:#f43f5e;font-size:1rem;"></i>
+              <span>Favourite Cities</span>
+            </div>
+            <button class="add-city-btn" onclick="openAddModal()" id="addCityBtn" aria-label="Add a new favourite city">
+              <i class="bi bi-plus"></i> Add City
+            </button>
+          </div>
+
+          <!-- Favourites list -->
+          <div id="favList" class="fav-list" role="list" aria-label="Favourite cities">
+            <!-- Populated by JS -->
+          </div>
+
+          <button class="view-all-btn" onclick="navigateTo('favourites')" aria-label="View all favourite cities">
+            View All Favourite Cities <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- ─── WORLD WEATHER ─── -->
+        <div class="panel-card" id="worldWeatherPanel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <i class="bi bi-globe2" style="color:#3b82f6;font-size:1rem;"></i>
+              <span>Weather around the World</span>
+            </div>
+            <button class="map-btn" aria-label="View on map">View on Map</button>
+          </div>
+
+          <div class="world-list" id="worldList" role="list">
+            <!-- World city items -->
+            <div class="world-item" data-city="New York" data-country="US" onclick="loadWorldCity(this)">
+              <img src="{{ url_for('static', filename='img/world_ny.png') }}" alt="New York" class="world-thumb">
+              <div class="world-info">
+                <div class="world-city">New York, <span class="world-ctry">US</span></div>
+                <div class="world-desc" id="world-ny-desc">Clear Sky</div>
+              </div>
+              <div class="world-temp-wrap">
+                <img class="world-icon" id="world-ny-icon" src="" alt="">
+                <div class="world-temp" id="world-ny-temp">—°C</div>
+              </div>
+              <i class="bi bi-chevron-right world-arrow"></i>
+            </div>
+
+            <div class="world-item" data-city="London" data-country="GB" onclick="loadWorldCity(this)">
+              <img src="{{ url_for('static', filename='img/world_london.png') }}" alt="London" class="world-thumb">
+              <div class="world-info">
+                <div class="world-city">London, <span class="world-ctry">GB</span></div>
+                <div class="world-desc" id="world-london-desc">Cloudy</div>
+              </div>
+              <div class="world-temp-wrap">
+                <img class="world-icon" id="world-london-icon" src="" alt="">
+                <div class="world-temp" id="world-london-temp">—°C</div>
+              </div>
+              <i class="bi bi-chevron-right world-arrow"></i>
+            </div>
+
+            <div class="world-item" data-city="Tokyo" data-country="JP" onclick="loadWorldCity(this)">
+              <img src="{{ url_for('static', filename='img/world_tokyo.png') }}" alt="Tokyo" class="world-thumb">
+              <div class="world-info">
+                <div class="world-city">Tokyo, <span class="world-ctry">JP</span></div>
+                <div class="world-desc" id="world-tokyo-desc">Partly Cloudy</div>
+              </div>
+              <div class="world-temp-wrap">
+                <img class="world-icon" id="world-tokyo-icon" src="" alt="">
+                <div class="world-temp" id="world-tokyo-temp">—°C</div>
+              </div>
+              <i class="bi bi-chevron-right world-arrow"></i>
+            </div>
+
+            <div class="world-item" data-city="Sydney" data-country="AU" onclick="loadWorldCity(this)">
+              <img src="{{ url_for('static', filename='img/world_sydney.png') }}" alt="Sydney" class="world-thumb">
+              <div class="world-info">
+                <div class="world-city">Sydney, <span class="world-ctry">AU</span></div>
+                <div class="world-desc" id="world-sydney-desc">Sunny</div>
+              </div>
+              <div class="world-temp-wrap">
+                <img class="world-icon" id="world-sydney-icon" src="" alt="">
+                <div class="world-temp" id="world-sydney-temp">—°C</div>
+              </div>
+              <i class="bi bi-chevron-right world-arrow"></i>
+            </div>
+
+          </div>
+        </div>
+        <!-- / WORLD WEATHER -->
+
+      </div>
+      <!-- / RIGHT PANEL -->
+
+    </main>
+    <!-- / CONTENT -->
+
+  </div>
+  <!-- / MAIN AREA -->
+
+</div>
+<!-- / APP LAYOUT -->
+
+<!-- =====================================================
+     Modal: Add / Edit Favourite
+===================================================== -->
+<div id="favModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="favModalTitle">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-ttl" id="favModalTitle">
+        <i class="bi bi-star-fill" style="color:#f59e0b;"></i>
+        Add Favourite City
+      </div>
+      <button class="modal-x" id="closeFavModal" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-bdy">
+      <input type="hidden" id="favIdInput">
+      <div id="favModalError" class="modal-error hidden" role="alert"></div>
+      <form id="favForm" novalidate>
+        <div class="form-grp">
+          <label for="favCityInput" class="form-lbl">City Name <span class="req-star">*</span></label>
+          <input type="text" id="favCityInput" class="form-fld" placeholder="e.g. Vijayawada" maxlength="100" required autocomplete="off">
+        </div>
+        <div class="form-grp">
+          <label for="favCountryInput" class="form-lbl">Country Code <span class="req-star">*</span></label>
+          <input type="text" id="favCountryInput" class="form-fld" placeholder="e.g. IN" maxlength="2" required autocomplete="off" style="text-transform:uppercase;">
+          <p class="form-hint">2-letter ISO code (IN, US, GB…)</p>
+        </div>
+        <div class="form-grp">
+          <label for="favNicknameInput" class="form-lbl">Nickname <span class="opt-tag">optional</span></label>
+          <input type="text" id="favNicknameInput" class="form-fld" placeholder="e.g. My City, Home" maxlength="100" autocomplete="off">
+        </div>
+      </form>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" id="cancelFavModal">Cancel</button>
+      <button class="btn-save" id="favSaveBtn">
+        <i class="bi bi-check2-circle"></i> Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     Modal: Confirm Delete
+===================================================== -->
+<div id="confirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-hdr">
+      <div class="modal-ttl" id="confirmModalTitle">
+        <i class="bi bi-trash3-fill" style="color:#ef4444;"></i>
+        Delete Favourite
+      </div>
+      <button class="modal-x" id="closeConfirmModal" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-bdy" style="text-align:center;padding:28px 24px;">
+      <div class="confirm-icon-wrap">🗑️</div>
+      <h3 class="confirm-title">Are you sure?</h3>
+      <p class="confirm-msg">Remove <strong id="confirmCityName"></strong> from your favourites?<br>This cannot be undone.</p>
+    </div>
+    <div class="modal-ftr" style="justify-content:center;gap:12px;">
+      <button class="btn-cancel" id="cancelConfirmModal">Cancel</button>
+      <button class="btn-delete" id="confirmDeleteBtn">
+        <i class="bi bi-trash3"></i> Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- App JS -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
